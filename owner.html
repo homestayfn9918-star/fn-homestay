@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Induk Master - Owner FN Homestay</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 font-sans text-slate-100">
+    
+    <nav class="bg-slate-950 p-4 border-b border-slate-800 shadow flex justify-between items-center">
+        <div>
+            <h1 class="text-base font-bold tracking-wider text-indigo-400">FN HOMESTAY SYSTEM</h1>
+            <p class="text-[11px] text-slate-400">Sistem Indukan Master (Master Real-Time Monitor)</p>
+        </div>
+        <div id="statusKoneksi" class="text-xs text-emerald-400">Connecting Master...</div>
+    </nav>
+
+    <div class="p-4 space-y-4">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="text-[10px] font-bold text-slate-500 uppercase">Omset Pendapatan Kamar</div>
+                <div id="boxTotalOmset" class="text-xl font-extrabold text-emerald-400 mt-1">Rp 0</div>
+            </div>
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="text-[10px] font-bold text-slate-500 uppercase">Dana Tunai Masuk (DP/Cash)</div>
+                <div id="boxTotalDanaMasuk" class="text-xl font-extrabold text-indigo-400 mt-1">Rp 0</div>
+            </div>
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="text-[10px] font-bold text-rose-400 uppercase">Total Pengeluaran Harian</div>
+                <div id="boxTotalPengeluaran" class="text-xl font-extrabold text-rose-500 mt-1">Rp 0</div>
+            </div>
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-950 to-emerald-950/20">
+                <div class="text-[10px] font-bold text-amber-400 uppercase">Saldo Bersih Sisa Kas</div>
+                <div id="boxSaldoBersih" class="text-xl font-extrabold text-amber-400 mt-1">Rp 0</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <h2 class="text-xs font-bold text-indigo-400 uppercase mb-2">Live Denah: FN18 TAHUNAN</h2>
+                <div id="denahOwnerFN18" class="grid grid-cols-5 gap-1.5"></div>
+            </div>
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <h2 class="text-xs font-bold text-indigo-400 uppercase mb-2">Live Denah: FN99 MULYOHARJO</h2>
+                <div id="denahOwnerFN99" class="grid grid-cols-4 gap-1.5"></div>
+            </div>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <h2 class="text-xs font-bold text-slate-400 uppercase mb-3">Jurnal Log Transaksi Tamu Masuk (Owner Control)</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead class="bg-slate-900 text-slate-400 border-b border-slate-800">
+                        <tr>
+                            <th class="p-3">Homestay</th>
+                            <th class="p-3">Kamar</th>
+                            <th class="p-3">Nama Tamu</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3">Total Bayar</th>
+                            <th class="p-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelLogBodyOwner" class="divide-y divide-slate-900"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+            <h2 class="text-xs font-bold text-rose-400 uppercase mb-3">Daftar Pengeluaran Operasional (Klik Hapus Jika Staf Salah Input)</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead class="bg-slate-900 text-rose-400 border-b border-slate-800">
+                        <tr>
+                            <th class="p-3">Waktu</th>
+                            <th class="p-3">Homestay</th>
+                            <th class="p-3">Keterangan Pengeluaran / Barang Belanjaan</th>
+                            <th class="p-3">Nominal Biaya</th>
+                            <th class="p-3 text-center">Otoritas Master</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelPengeluaranBodyOwner" class="divide-y divide-slate-900"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const socket = io();
+        let globalData = { daftarKamar: [], statusKamar: {}, logTransaksi: [], logPengeluaran: [] };
+
+        socket.on('connect', () => {
+            document.getElementById('statusKoneksi').textContent = "Sistem Induk: TERKONEKSI LIVE";
+        });
+
+        socket.on('initData', (data) => { globalData = data; renderLayarOwner(); });
+        socket.on('updateSistem', (data) => { globalData = data; renderLayarOwner(); });
+
+        function renderLayarOwner() {
+            let totalOmset = 0; let totalDP = 0; let totalPengeluaran = 0;
+
+            globalData.logTransaksi.forEach(tx => {
+                totalOmset += Number(tx.totalBayar || 0);
+                totalDP += Number(tx.dp || 0);
+            });
+
+            globalData.logPengeluaran.forEach(out => {
+                totalPengeluaran += Number(out.nominal || 0);
+            });
+
+            // Kas Bersih = Total Uang DP Masuk dikurangi Pengeluaran Operasional harian
+            let saldoBersih = totalDP - totalPengeluaran;
+
+            document.getElementById('boxTotalOmset').textContent = 'Rp ' + totalOmset.toLocaleString('id-ID');
+            document.getElementById('boxTotalDanaMasuk').textContent = 'Rp ' + totalDP.toLocaleString('id-ID');
+            document.getElementById('boxTotalPengeluaran').textContent = 'Rp ' + totalPengeluaran.toLocaleString('id-ID');
+            document.getElementById('boxSaldoBersih').textContent = 'Rp ' + saldoBersih.toLocaleString('id-ID');
+
+            // Render Denah Grid
+            const box18 = document.getElementById('denahOwnerFN18'); const box99 = document.getElementById('denahOwnerFN99');
+            box18.innerHTML = ''; box99.innerHTML = '';
+
+            globalData.daftarKamar.forEach(k => {
+                const status = globalData.statusKamar[k.id]?.status || 'KOSONG';
+                const namaTamu = globalData.statusKamar[k.id]?.tamu || '';
+                let warna = 'bg-emerald-950 text-emerald-400 border-emerald-900';
+                if (status === 'Booked') warna = 'bg-amber-950 text-amber-400 border-amber-900';
+                if (status === 'Active / Check-In') warna = 'bg-rose-950 text-rose-400 border-rose-900';
+
+                const htmlKamar = `<div class="p-2 border text-center ${warna} rounded"><div class="text-[9px] opacity-50">K${k.nomor}</div><div class="text-[10px] font-bold truncate">${namaTamu || 'Kosong'}</div></div>`;
+                if(k.homestay === "FN18 TAHUNAN") box18.innerHTML += htmlKamar; else box99.innerHTML += htmlKamar;
+            });
+
+            // Render Jurnal Tamu
+            const tbody = document.getElementById('tabelLogBodyOwner'); tbody.innerHTML = '';
+            globalData.logTransaksi.forEach((tx, idx) => {
+                tbody.innerHTML += `
+                    <tr class="text-[11px] border-b border-slate-900 text-slate-300">
+                        <td class="p-3">${tx.homestayNama.split(' ')[0]}</td>
+                        <td class="p-3 font-bold">No ${tx.noKamar}</td>
+                        <td class="p-3 font-bold text-white">${tx.namaTamu}</td>
+                        <td class="p-3">${tx.status}</td>
+                        <td class="p-3 font-bold">Rp ${tx.totalBayar.toLocaleString('id-ID')}</td>
+                        <td class="p-3 text-center"><button onclick="ownerPaksaHapus('${idx}')" class="text-rose-400 border border-rose-900 bg-rose-950/20 px-2 py-0.5 rounded">Hapus</button></td>
+                    </tr>
+                `;
+            });
+
+            // BARU! Render Jurnal Pengeluaran Operasional di Layar Owner
+            const tbodyOut = document.getElementById('tabelPengeluaranBodyOwner'); tbodyOut.innerHTML = '';
+            if(globalData.logPengeluaran.length === 0) {
+                tbodyOut.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-slate-600 italic">Belum ada pencatatan operasional masuk.</td></tr>`;
+            } else {
+                globalData.logPengeluaran.forEach((out, idx) => {
+                    tbodyOut.innerHTML += `
+                        <tr class="text-[11px] border-b border-slate-900 text-slate-300">
+                            <td class="p-3 text-slate-500">${out.waktu}</td>
+                            <td class="p-3 font-semibold text-slate-400">${out.homestay}</td>
+                            <td class="p-3 font-medium text-white">${out.keterangan}</td>
+                            <td class="p-3 font-bold text-rose-400">Rp ${out.nominal.toLocaleString('id-ID')}</td>
+                            <td class="p-3 text-center">
+                                <button onclick="ownerHapusBiaya('${idx}', '${out.keterangan}')" class="text-rose-300 bg-rose-900/40 hover:bg-rose-900 border border-rose-800 px-2.5 py-0.5 rounded text-[10px]">
+                                    Batalkan Pengeluaran
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function ownerPaksaHapus(idx) {
+            if (confirm("Hapus jurnal penginapan tamu ini?")) socket.emit('ownerHapusTransaksi', { indexLog: idx });
+        }
+
+        // BARU! Fungsi Owner Membatalkan / Menghapus Jika Staf Salah Ketik Pengeluaran
+        function ownerHapusBiaya(idx, ket) {
+            if (confirm(`Apakah Anda (Owner) yakin ingin membatalkan pengeluaran harian:\n"${ket}"?\n\nSaldo Sisa Kas Bersih Anda akan dikalkulasikan bertambah kembali!`)) {
+                socket.emit('ownerHapusPengeluaran', { indexLog: idx });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Resepsionis - Homestay FN</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+    
+    <nav class="bg-indigo-700 text-white p-4 shadow-md flex justify-between items-center">
+        <h1 class="text-base font-bold tracking-wider">FN HOMESTAY SYSTEM</h1>
+        <div id="statusKoneksi" class="text-xs bg-indigo-900 px-3 py-1 rounded-full border border-indigo-500">Connecting...</div>
+    </nav>
+
+    <div class="p-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+        
+        <div class="xl:col-span-2 space-y-4">
+            
+            <div class="flex space-x-1 bg-slate-200 p-1 rounded-lg">
+                <button id="tabFN18" onclick="gantiTabHomestay('FN18 TAHUNAN')" class="flex-1 py-3 text-center font-bold text-xs sm:text-sm rounded-md bg-indigo-600 text-white shadow">
+                    FN18 TAHUNAN (Kamar 29-48)
+                </button>
+                <button id="tabFN99" onclick="gantiTabHomestay('FN99 MULYOHARJO')" class="flex-1 py-3 text-center font-bold text-xs sm:text-sm rounded-md text-slate-600 hover:bg-slate-300">
+                    FN99 MULYOHARJO (Kamar 1-18)
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <h2 id="judulDenah" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Kondisi Kamar: FN18 TAHUNAN</h2>
+                <div id="petaKamar" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2"></div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Log Transaksi Jurnal Tamu</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs whitespace-nowrap">
+                        <thead class="bg-slate-100 text-slate-600 uppercase font-bold text-[10px] tracking-wider">
+                            <tr>
+                                <th class="p-3">Homestay</th>
+                                <th class="p-3">Kamar</th>
+                                <th class="p-3">Nama Tamu</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3">Total Bayar</th>
+                                <th class="p-3">Sisa Tagihan</th>
+                                <th class="p-3">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelLogBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-3">Log Pengeluaran Operasional Harian Ter-input</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs whitespace-nowrap">
+                        <thead class="bg-rose-50 text-rose-700 uppercase font-bold text-[10px] tracking-wider">
+                            <tr>
+                                <th class="p-3">Waktu</th>
+                                <th class="p-3">Homestay</th>
+                                <th class="p-3">Keterangan Pengeluaran (Nota)</th>
+                                <th class="p-3">Nominal Biaya (Rp)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelPengeluaranBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div>
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest border-b pb-2">Input Jurnal Tamu Baru</h2>
+                    <div id="labelFormInfo" class="text-xs font-bold text-indigo-600 mt-2 bg-indigo-50 p-2 rounded border border-indigo-200 text-center uppercase">
+                        Lokasi Input: FN18 TAHUNAN
+                    </div>
+                </div>
+
+                <form id="formInputTamu" class="space-y-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Pilih Nomor Kamar</label>
+                        <select id="selectKamar" class="w-full p-2 border-2 border-indigo-100 rounded-lg text-sm font-bold text-indigo-700" required>
+                            <option value="">-- Pilih Nomor Kamar --</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status Awal</label>
+                            <select id="inpStatus" class="w-full p-2 border rounded-lg text-xs font-semibold">
+                                <option value="Booked">Booked</option>
+                                <option value="Active / Check-In">Active / Check-In</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Marketing</label>
+                            <select id="inpMarketing" class="w-full p-2 border rounded-lg text-xs font-bold">
+                                <option value="SDP">SDP - Pratama</option>
+                                <option value="SD">SD - Enggar</option>
+                                <option value="SD1">SD1 - Dila</option>
+                                <option value="SD2">SD2 - Sekha</option>
+                                <option value="SDO">SDO - Obby</option>
+                                <option value="PS">PS - Pras</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-2">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nama Tamu</label>
+                            <input type="text" id="inpNama" class="w-full p-2 border rounded-lg text-xs" placeholder="Nama penginap" required>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Umur</label>
+                            <input type="number" id="inpUmur" class="w-full p-2 border rounded-lg text-xs" placeholder="Thn" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Alamat Asal</label>
+                        <input type="text" id="inpAlamat" class="w-full p-2 border rounded-lg text-xs" placeholder="Kota asal" required>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-1">
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Harga Kamar</label>
+                            <input type="number" id="inpTotal" class="w-full p-1.5 border rounded-lg text-xs" value="0" required>
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">DP / Muka</label>
+                            <input type="number" id="inpDP" class="w-full p-1.5 border rounded-lg text-xs text-emerald-600" value="0">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1">Biaya Tambah</label>
+                            <input type="number" id="inpTambahan" class="w-full p-1.5 border rounded-lg text-xs" value="0">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 p-2.5 rounded border text-[11px] font-bold space-y-0.5">
+                        <div class="flex justify-between"><span>Total Bayar:</span><span id="lblTotal">Rp 0</span></div>
+                        <div class="flex justify-between"><span>Sisa Tagihan:</span><span id="lblSisa" class="text-rose-600">Rp 0</span></div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold p-2.5 rounded-lg text-xs uppercase tracking-wider shadow">Simpan Transaksi Tamu</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
+                <div>
+                    <h2 class="text-xs font-bold text-rose-600 uppercase tracking-widest border-b pb-2">Input Pengeluaran Operasional</h2>
+                </div>
+
+                <form id="formPengeluaran" class="space-y-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Lokasi Homestay</label>
+                        <select id="outHomestay" class="w-full p-2 border rounded-lg text-xs font-bold" required>
+                            <option value="FN18 TAHUNAN">FN18 TAHUNAN</option>
+                            <option value="FN99 MULYOHARJO">FN99 MULYOHARJO</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Keterangan Biaya (Contoh: Beli Sabun, Token Listrik)</label>
+                        <input type="text" id="outKeterangan" class="w-full p-2 border rounded-lg text-xs" placeholder="Misal: Beli sabun mandi & sampo kamar mandi" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nominal Uang Keluar (Rp)</label>
+                        <input type="number" id="outNominal" class="w-full p-2 border rounded-lg text-xs font-bold text-rose-600" placeholder="Jumlah rupiah" required>
+                    </div>
+
+                    <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold p-2.5 rounded-lg text-xs uppercase tracking-wider shadow">Simpan Pengeluaran</button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let globalData = { daftarKamar: [], statusKamar: {}, logTransaksi: [], logPengeluaran: [] };
+        let homestayAktif = "FN18 TAHUNAN";
+        const kamusMarketing = { 'SD': 'Enggar', 'SD1': 'Dila', 'SD2': 'Sekha', 'SDP': 'Pratama', 'SDO': 'Obby', 'PS': 'Pras' };
+
+        socket.on('connect', () => {
+            const ind = document.getElementById('statusKoneksi');
+            ind.textContent = "Connected"; ind.className = "text-xs bg-emerald-600 px-3 py-1 rounded-full text-white";
+        });
+
+        socket.on('initData', (data) => { globalData = data; renderSistemAplikasi(); });
+        socket.on('updateSistem', (data) => { globalData = data; renderSistemAplikasi(); });
+
+        function gantiTabHomestay(namaHomestay) {
+            homestayAktif = namaHomestay;
+            const btn18 = document.getElementById('tabFN18'); const btn99 = document.getElementById('tabFN99');
+            const lblForm = document.getElementById('labelFormInfo');
+            
+            if(namaHomestay === "FN18 TAHUNAN") {
+                btn18.className = "flex-1 py-3 text-center font-bold text-xs sm:text-sm rounded-md bg-indigo-600 text-white shadow";
+                btn99.className = "flex-1 py-3 text-center font-bold text-xs sm:text-sm rounded-md text-slate-600 hover:bg-slate-300";
+                document.getElementById('judulDenah').textContent = "Kondisi Kamar: FN18 TAHUNAN";
+                lblForm.textContent = "Lokasi Input: FN18 TAHUNAN";
+            } else {
+                btn99.className = "flex-1 py-3 text-center font-bold text-xs sm:text-sm rounded-md bg-indigo-600 text-white shadow";
+                btn18.className = "flex-1 py-3 text-center font-bold text-xs sm:text-sm rounded-md text-slate-600 hover:bg-slate-300";
+                document.getElementById('judulDenah').textContent = "Kondisi Kamar: FN99 MULYOHARJO";
+                lblForm.textContent = "Lokasi Input: FN99 MULYOHARJO";
+            }
+            renderDenahKamarSaja(); perbaruiDropdownKamarForm();
+        }
+
+        function perbaruiDropdownKamarForm() {
+            const selectKamar = document.getElementById('selectKamar');
+            selectKamar.innerHTML = '<option value="">-- Pilih Nomor Kamar --</option>';
+            globalData.daftarKamar.forEach(k => {
+                if(k.homestay === homestayAktif) {
+                    const status = globalData.statusKamar[k.id]?.status || 'KOSONG';
+                    if (status === 'KOSONG') {
+                        let opt = document.createElement('option'); opt.value = k.id;
+                        opt.textContent = `Kamar No ${k.nomor} (${k.fasilitas})`;
+                        selectKamar.appendChild(opt);
+                    }
+                }
+            });
+        }
+
+        function renderDenahKamarSaja() {
+            const peta = document.getElementById('petaKamar'); peta.innerHTML = '';
+            globalData.daftarKamar.forEach(k => {
+                if(k.homestay === homestayAktif) {
+                    const status = globalData.statusKamar[k.id]?.status || 'KOSONG';
+                    const namaTamu = globalData.statusKamar[k.id]?.tamu || '';
+                    let warna = 'bg-emerald-500';
+                    if (status === 'Booked') warna = 'bg-amber-500';
+                    if (status === 'Active / Check-In') warna = 'bg-rose-500';
+
+                    peta.innerHTML += `
+                        <div class="${warna} p-2.5 rounded-lg text-white font-bold text-center text-xs shadow-sm">
+                            <div>KMR ${k.nomor}</div>
+                            <div class="text-[9px] bg-black/10 rounded my-0.5">${status.split(' ')[0]}</div>
+                            ${namaTamu ? `<div class="text-[9px] bg-white text-slate-800 px-1 rounded truncate">${namaTamu}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+        }
+
+        function renderSistemAplikasi() {
+            perbaruiDropdownKamarForm();
+            renderDenahKamarSaja();
+
+            // Render Log Tabel Tamu Masuk
+            const tbody = document.getElementById('tabelLogBody'); tbody.innerHTML = '';
+            globalData.logTransaksi.forEach((tx, idx) => {
+                let badge = tx.status === 'Booked' ? 'Booked' : (tx.status === 'Active / Check-In' ? 'Active' : 'Selesai');
+                let aksi = tx.status === 'Booked' ? `<button onclick="ubahStatus('${idx}', 'Active / Check-In')" class="bg-rose-600 text-white font-bold text-[10px] px-2 py-0.5 rounded">Check-In</button>` : (tx.status === 'Active / Check-In' ? `<button onclick="ubahStatus('${idx}', 'Completed / Check-Out')" class="bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded">Check-Out</button>` : '<span class="text-slate-400">Selesai</span>');
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 text-[11px] border-b">
+                        <td class="p-2.5">${tx.homestayNama.split(' ')[0]}</td>
+                        <td class="p-2.5 font-bold">No ${tx.noKamar}</td>
+                        <td class="p-2.5 font-bold">${tx.namaTamu}</td>
+                        <td class="p-2.5">${badge}</td>
+                        <td class="p-2.5 font-bold">Rp ${tx.totalBayar.toLocaleString('id-ID')}</td>
+                        <td class="p-2.5 font-bold text-rose-600">Rp ${tx.sisaBayar.toLocaleString('id-ID')}</td>
+                        <td class="p-2.5">${aksi}</td>
+                    </tr>
+                `;
+            });
+
+            // Render Log Tabel Pengeluaran Biaya Operasional
+            const tbodyOut = document.getElementById('tabelPengeluaranBody'); tbodyOut.innerHTML = '';
+            if(globalData.logPengeluaran.length === 0) {
+                tbodyOut.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-400 italic">Belum ada pengeluaran hari ini.</td></tr>`;
+            } else {
+                globalData.logPengeluaran.forEach(out => {
+                    tbodyOut.innerHTML += `
+                        <tr class="hover:bg-rose-50 text-[11px] border-b">
+                            <td class="p-2.5 text-slate-400">${out.waktu}</td>
+                            <td class="p-2.5 font-semibold text-slate-600">${out.homestay}</td>
+                            <td class="p-2.5 font-medium text-slate-900">${out.keterangan}</td>
+                            <td class="p-2.5 font-bold text-rose-600">Rp ${Number(out.nominal).toLocaleString('id-ID')}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        // Hitungan Otomatis Kas
+        const inpTotal = document.getElementById('inpTotal'); const inpDP = document.getElementById('inpDP'); const inpTambahan = document.getElementById('inpTambahan');
+        function kalkulasiForm() {
+            const hrg = Number(inpTotal.value || 0); const dp = Number(inpDP.value || 0); const tmb = Number(inpTambahan.value || 0);
+            document.getElementById('lblTotal').textContent = 'Rp ' + (hrg + tmb).toLocaleString('id-ID');
+            document.getElementById('lblSisa').textContent = 'Rp ' + ((hrg + tmb) - dp).toLocaleString('id-ID');
+        }
+        [inpTotal, inpDP, inpTambahan].forEach(el => el.addEventListener('input', kalkulasiForm));
+
+        // Submit Tamu Baru
+        document.getElementById('formInputTamu').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const idKamar = document.getElementById('selectKamar').value;
+            const k = globalData.daftarKamar.find(item => item.id === idKamar);
+            if (!k) return;
+
+            const hrg = Number(inpTotal.value || 0); const dp = Number(inpDP.value || 0); const tmb = Number(inpTambahan.value || 0);
+            const mktKode = document.getElementById('inpMarketing').value;
+
+            socket.emit('transaksiBaru', {
+                keyKamar: idKamar,
+                tx: {
+                    keyKamar: idKamar, homestayNama: k.homestay, noKamar: k.nomor,
+                    namaTamu: document.getElementById('inpNama').value,
+                    umur: document.getElementById('inpUmur').value, alamat: document.getElementById('inpAlamat').value,
+                    status: document.getElementById('inpStatus').value, kodeMarketing: mktKode, namaMarketing: kamusMarketing[mktKode],
+                    hargaKamar: hrg, dp: dp, biayaTambahan: tmb, totalBayar: hrg + tmb, sisaBayar: (hrg + tmb) - dp
+                }
+            });
+            document.getElementById('formInputTamu').reset(); kalkulasiForm(); alert("Data Jurnal Tamu Tersimpan!");
+        });
+
+        // BARU! Submit Pengeluaran Operasional
+        document.getElementById('formPengeluaran').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const dt = new Date();
+            const waktuStr = `${dt.getHours().toString().padStart(2,'0')}:${dt.getMinutes().toString().padStart(2,'0')}`;
+            
+            const payloadPengeluaran = {
+                waktu: waktuStr,
+                homestay: document.getElementById('outHomestay').value,
+                keterangan: document.getElementById('outKeterangan').value,
+                nominal: Number(document.getElementById('outNominal').value || 0)
+            };
+
+            socket.emit('pengeluaranBaru', payloadPengeluaran);
+            document.getElementById('formPengeluaran').reset();
+            alert("Nota Pengeluaran Operasional Berhasil Dicatat!");
+        });
+
+        function ubahStatus(idx, status) {
+            socket.emit('ubahStatusTamu', { indexLog: idx, statusBaru: status });
+        }
+    </script>
+</body>
+</html>
