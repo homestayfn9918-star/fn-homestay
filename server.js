@@ -116,11 +116,8 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = 3000;
 // GANTI BAGIAN server.listen PALING BAWAH DI server.js MENJADI:
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`Sistem online di port ${PORT}`);
-});
-    console.log(`Sistem Sinkronisasi FN Homestay Aktif di Port ${PORT}`);
 });
