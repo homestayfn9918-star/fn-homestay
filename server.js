@@ -45,5 +45,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => console.log(`Server online di port ${PORT}`));
+const port = process.env.PORT || 10000; 
+server.listenapp.listen(port, () => {
+    console.log(`Server sedang berjalan di port ${port}`);
+});
